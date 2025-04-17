@@ -1,0 +1,40 @@
+[project]
+name = "aiuc-workshop"
+version = "0.1.0"
+description = "Build a reliable RAG application with Cleanlab"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cleanlab-codex~=1.0.12",
+    "cleanlab-tlm~=1.0.20",
+    "gradio~=5.25.2",
+    "llama-index-core~=0.12.30",
+    "llama-index-embeddings-google-genai~=0.1.0",
+    "llama-index-readers-web~=0.3.9",
+    "python-dotenv~=1.1.0",
+]
+
+[tool.ruff]
+line-length = 120
+lint.select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # whitespace at EOL
+    "W291",
+]
+
+[dependency-groups]
+dev = [
+    "mypy~=1.15.0",
+    "ruff~=0.11.4",
+]
