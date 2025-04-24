@@ -2,6 +2,14 @@
 
 Building a prototype AI application is easy, but getting it to work reliably in production is not. Just ask the developers of New York’s MyCity, whose AI got caught telling businesses to break the law. (And there are many other stories like this!) We envision a future where AI applications avoid such issues by design, using automated detection and remediation of bad responses. In this hands-on workshop, we’ll walk you through a case study of building a reliable retrieval-augmented generation (RAG) application. We’ll start by implementing a baseline application, then integrate Cleanlab’s automated real-time evaluations to detect general issues such as knowledge gaps and hallucinations as well as custom application-specific evaluation criteria, and finally add real-time remediation of these issues.
 
+This workshop reproduces (and fixes!) [Cursor's rogue customer support AI](https://fortune.com/article/customer-support-ai-cursor-went-rogue/).
+
+<p align="center">
+<img src="assets/example.png" width="693" alt="Example of rogue customer support AI">
+</p>
+
+---
+
 [Workshop @ AI User Conference 2025 - Developer Day](https://www.aiuserconference.com/session/from-prototype-to-production-bridging-the-ai-reliability-gap)
 <br>
 Presented by [Anish Athalye](https://www.linkedin.com/in/anishathalye/) and [Angela Liu](https://www.linkedin.com/in/angelaxliu/)
