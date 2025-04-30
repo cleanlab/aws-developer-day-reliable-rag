@@ -1,27 +1,26 @@
 import os
 import pprint
-from pathlib import Path
 
 from dotenv import load_dotenv
 
-from knowledge_base import KnowledgeBase
+import patch_aiohttp  # noqa: F401
 
-if os.environ.get("USE_SOLUTION") == "baseline":
-    from solutions.baseline_rag_solution import RAG
-elif os.environ.get("USE_SOLUTION") == "custom_evals":
-    from solutions.custom_evals_example import RAG  # type: ignore
-elif os.environ.get("USE_SOLUTION"):
-    from solutions.cleanlab_rag_solution import RAG  # type: ignore
+USE_SOLUTION = os.environ.get("USE_SOLUTION")
+if USE_SOLUTION is not None:
+    if USE_SOLUTION in {"1", "2", "3", "4"}:
+        import importlib
+        solution = importlib.import_module(f"solutions.part{USE_SOLUTION}")
+        RAG = solution.RAG
+    else:
+        msg = f"Invalid USE_SOLUTION value: {USE_SOLUTION}. Expected '1', '2', '3', or '4'."
+        raise ValueError(msg)
 else:
-    from rag import RAG  # type: ignore
+    from rag import RAG
 
 
 def main() -> None:
     load_dotenv()
-    print("Loading knowledge base...")
-    knowledge_base = KnowledgeBase.from_persisted(str(Path(__file__).parent / "vector_store/"))
-    print("Knowledge base loaded")
-    rag = RAG(knowledge_base)
+    rag = RAG()
     print()
     try:
         while True:
@@ -34,6 +33,7 @@ def main() -> None:
             print(f"\n{'-' * 40}", end="\n\n")
     except (KeyboardInterrupt, EOFError):
         pass
+
 
 if __name__ == "__main__":
     main()

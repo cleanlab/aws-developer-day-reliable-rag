@@ -1,6 +1,6 @@
 # From Prototype to Production: Bridging the AI Reliability Gap
 
-Building a prototype AI application is easy, but getting it to work reliably in production is not. Just ask the developers of New York’s MyCity, whose AI got caught telling businesses to break the law. (And there are many other stories like this!) We envision a future where AI applications avoid such issues by design, using automated detection and remediation of bad responses. In this hands-on workshop, we’ll walk you through a case study of building a reliable retrieval-augmented generation (RAG) application. We’ll start by implementing a baseline application, then integrate Cleanlab’s automated real-time evaluations to detect general issues such as knowledge gaps and hallucinations as well as custom application-specific evaluation criteria, and finally add real-time remediation of these issues.
+Building a prototype AI application is easy, but getting it to work reliably in production is not. Just ask the developers of New York's MyCity, whose AI got caught telling businesses to break the law. (And there are many other stories like this!) We envision a future where AI applications avoid such issues by design, using automated detection and remediation of bad responses. In this hands-on workshop, we'll walk you through a case study of building a reliable retrieval-augmented generation (RAG) application. We'll start by implementing a baseline application, then integrate Cleanlab's automated real-time evaluations to detect general issues such as knowledge gaps and hallucinations as well as custom application-specific evaluation criteria, and finally add real-time remediation of these issues.
 
 This workshop reproduces (and fixes!) [Cursor's rogue customer support AI](https://fortune.com/article/customer-support-ai-cursor-went-rogue/).
 
@@ -10,97 +10,152 @@ This workshop reproduces (and fixes!) [Cursor's rogue customer support AI](https
 
 ---
 
-[Workshop @ AI User Conference 2025 - Developer Day](https://www.aiuserconference.com/session/from-prototype-to-production-bridging-the-ai-reliability-gap)
+[Data for Generative AI Workshop with AWS and Cleanlab](https://aws.amazon.com/startups/events/data-for-generative-ai-workshop-with-aws-and-cleanlabai) (Friday, May 9, 2025)
 <br>
-Presented by [Anish Athalye](https://www.linkedin.com/in/anishathalye/) and [Angela Liu](https://www.linkedin.com/in/angelaxliu/)
+Presented by [Anish Athalye](https://www.linkedin.com/in/anishathalye/)
 <br>
-[Slides](https://docs.google.com/presentation/d/1-UQ2Ne16GpNmGXE9ezZ0aodSNQ-oRZEEwvLvjkrrJVc/edit?usp=sharing)
+[Slides](https://docs.google.com/presentation/d/1dMYb3J2vF8pZGY--vwKRcLYlFjORdDEng14-WpcSN-U/edit?usp=sharing)
 
 ## Part 0: Prerequisites
 
-At the start of this workshop, you'll need to set up a few things, including a development environment and some accounts/API keys.
+At the start of this workshop, you'll need to set up a Cleanlab account, configure a Project, and save API keys.
 
-### Development environment
+For the entirety of this workshop, you will be using the Cloud9 IDE you set up earlier.
 
-This workshop supports both a local development environment and a Cloud-based development environment.
+We'll set up Cleanlab accounts and projects first, but explain them in detail later as we go through the workshop.
 
-#### Local development
+### 0.1 TLM
 
-If you already have a local development environment set up with an IDE and the ability to install packages, we recommend that you use that.
+Create a Cleanlab TLM account: go to [tlm.cleanlab.ai](https://tlm.cleanlab.ai), create an account, activate your trial, and confirm your email address.
 
-We'll be using the [uv](https://docs.astral.sh/uv/) project and package manager for this workshop. You can install it by [following these instructions](https://docs.astral.sh/uv/getting-started/installation/) (and, e.g., installing it with your system package manager, like `brew install uv`).
+Next, find and copy your API key:
 
-#### Cloud-based development
+![Copy your API key](./assets/0-1-copy-api-key.png)
 
-If you don't have a local development environment set up, you can use a cloud-based development environment. We recommend using GitHub Codespaces (you get 60 hours of free usage with your GitHub account per month).
+We want to save this API key in the `.env` file in the Cloud9 IDE. First, configure Cloud9 to show hidden files by clicking on the gear icon in the file browser and selecting "Show Hidden Files":
 
-1. Fork this repository.
-2. Open the repository in a Codespace.
-3. Run `curl -LsSf https://astral.sh/uv/install.sh | sh` to install `uv`.
+![Show Hidden Files](./assets/0-1-hidden-files.png)
 
-GitHub Codespaces supports everything you need to complete this workshop, including automatically forwarding ports when you `uv run ui.py` to let you use the UI for the RAG application.
+Next, open up the `aws-developer-day-reliable-rag` directory, right click on the `.env.sample` file, and duplicate it:
 
-### Accounts and API keys
+![Duplicate](./assets/0-1-duplicate.png)
 
-This workshop uses Gemini for embeddings, TLM for real-time evaluation, and Codex for issue remediation. We'll explain all of these over the course of the workshop, but let's create the accounts and API keys up front.
+Next, rename this file to `.env` by right clicking on it, selecting rename, and typing in the new name `.env`. Make sure to delete the original file extension; the file should be called just `.env`. Open up this file, add your TLM API key as `CLEANLAB_TLM_API_KEY`, and save the file:
 
-Your API keys should go in a `.env` file; you can initialize it from the `.env.sample` file in this repository.
+![Edit .env](./assets/0-1-edit.png)
 
-1. **Cleanlab accounts**: sign up for a Cleanlab account at [tlm.cleanlab.ai](https://tlm.cleanlab.ai/). After activating your account for TLM, you will also need to activate your account for [codex.cleanlab.ai](https://codex.cleanlab.ai/) (same account, you just need to activate both).
-   1. Find your TLM API key in the [TLM dashboard](https://tlm.cleanlab.ai/) and save it in `.env` as `CLEANLAB_TLM_API_KEY`.
-   2. Create a new Codex project, go to the Settings page, create an access key, and save it in `.env` as `CLEANLAB_CODEX_ACCESS_KEY`.
-2. **Gemini API key**: sign up for a Gemini API key [Google AI Studio](https://aistudio.google.com/app/apikey) using your Google account.
-   1. Create a new API key and save it in `.env` as `GOOGLE_API_KEY`.
+### 0.2 Codex
 
-### Testing the setup
+Now, activate your Cleanlab account for [codex.cleanlab.ai](https://codex.cleanlab.ai/) (same Cleanlab account, you just need to activate Codex).
 
-To confirm that you've set environment variables correctly and that you've installed dependencies such as uv, run:
+For this workshop, we will need a Codex project. Create a project by clicking on the "Create new" button:
 
-```console
-$ uv run test_env.py
-all ok
+![Create new project](./assets/0-2-create-new.png)
+
+Add a name (like "AWS Workshop"), leave the rest of the fields as-is, and click "Save":
+
+![Create project](./assets/0-2-create-project.png)
+
+Now, open up the settings for the newly-created project:
+
+![Open settings](./assets/0-2-open-settings.png)
+
+Create a new access key for the project:
+
+![Create access key](./assets/0-2-create-access-key.png)
+
+Give the access key a name, leave the rest of the fields blank, and click "Create":
+
+![Configure access key](./assets/0-2-configure-access-key.png)
+
+Copy the access key:
+
+![Copy access key](./assets/0-2-copy-access-key.png)
+
+In Cloud9, save this access key in `.env` as `CLEANLAB_CODEX_ACCESS_KEY`:
+
+![Save access key](./assets/0-2-save-access-key.png)
+
+Remember to save the file!
+
+### 0.3: Sync the knowledge base
+
+As part of the provisioning the infrastructure, we have created a knowledge base **kb-cleanlab** which is using an Amazon Aurora PostgreSQL database with the pgvector extension as the vector database. This knowledge base is connected to an S3 bucket which contains example data, but the knowledge base is not synced yet.
+
+To sync the knowledge base, run the following command:
+
+```bash
+RAG_DATASOURCE_ID=$(aws bedrock-agent list-data-sources --knowledge-base-id ${RAG_KNOWLEDGE_BASE_ID} --query 'dataSourceSummaries[0].dataSourceId' --output text)
+aws bedrock-agent start-ingestion-job --data-source-id ${RAG_DATASOURCE_ID} --knowledge-base-id ${RAG_KNOWLEDGE_BASE_ID}
 ```
 
-If you see any errors, please ask for help!
+![Sync knowledge base](./assets/0-3-sync-kb.png)
+
+### 0.4: Test the setup
+
+To confirm that you've set environment variables correctly, run the test script.
+
+Ensure the console is open:
+
+![View console](./assets/0-4-view-console.png)
+
+Open a terminal:
+
+![Open terminal](./assets/0-4-open-terminal.png)
+
+Switch into the project directory with `cd aws-developer-day-reliable-rag` and run `uv run test_env.py`:
+
+![Run test](./assets/0-4-test-env.png)
+
+You should see the script print out `all ok`, confirming that your setup works!
 
 ## Part 1: Implementing a baseline RAG application
 
-![Baseline RAG system architecture](./assets/baseline.png)
+![Baseline RAG system architecture](./assets/1-baseline.svg)
 
-### 1.1: Set up the knowledge base
+### 1.1: Implement the RAG system
 
-For this part of the workshop, we'll be creating a knowledge base of documents from the [Cursor documentation](https://docs.cursor.com/). For convenience, we've included the scraped documents in the `example_data` directory of this codebase. We've also included a script to set up
-a knowledge base from this directory. The script will load the markdown documents from `example_data/cursor_docs`, split them into smaller chunks (using a Markdown splitter), and populate a LlamaIndex in-memory VectorStoreIndex. It will then persist the VectorStoreIndex to disk in the `vector_store` directory to be used later in the workshop.
+We start by implementing a baseline RAG system that will answer customer support questions based on the Cursor support docs. This system will retrieve relevant context from the knowledge base and pass it to an LLM to generate a response that answers the user's question.
 
-Run the script using `uv run create_knowledge_base.py example_data/cursor_docs`.
+This workshop has already set up an AWS Bedrock Knowledge Base for you (using PostgreSQL/pgvector as the vector database) using the Cursor support docs as the content; a copy of the KB source material is available in [example_data](example_data/) for reference.
 
-### 1.2: Implement the RAG system
+We've provided a partial implementation of the RAG system in the `rag.py` file. Start by familiarizing yourself with the provided code:
 
-Now that we have a knowledge base, we can implement a baseline RAG system that will answer customer support questions based on the Cursor support docs. This system will retrieve relevant context from the knowledge base and pass it to an LLM to generate a response that answers the user's question.
+![rag.py](./assets/1-1-rag.png)
 
-We've provided a skeleton implementation of the RAG system in the `rag.py` file. Your task is to implement a few methods to complete the system.
+Your task is to implement a single method to complete the system: the `_query` method. This method will take the user's question and use the `_retrieve`, `_format_contexts`, and `_generate` methods to query the RAG system and get an answer for the user's question based on relevant context. See TODO Part 1.1 in `rag.py`.
 
-### 1.2a: Format the retrieved contexts
-
-First, we'll implement the `_format_contexts` method. This method will take a list of retrieved context chunks and format them into a single string that can be passed to the LLM. See TODO Part 1.2a in `rag.py`.
-
-### 1.2b: Format the final prompt
-
-Next, we'll implement the `_format_prompt` method. This method will take the user's question and the formatted context chunks and format them into a single prompt that can be passed to the LLM. This method is used within the `_generate` method to format the final prompt passed to the LLM. See TODO Part 1.2b in `rag.py`.
-
-### 1.2c: Query the RAG system
-
-Finally, we'll implement the `_query` method. This method will take the user's question and use the `_retrieve` and `_generate` methods to query the RAG system and get an answer for the user's question based on relevant context. See TODO Part 1.2c in `rag.py`.
-
-### 1.3: Test the baseline RAG system
+### 1.2: Test the baseline RAG system
 
 You should now be able to run the RAG system using `uv run cli.py` which provides a CLI interface for the RAG system or `uv run ui.py` which provides a basic UI interface for the RAG system. Try out some questions to see if your system works! For inspiration, you can check out the questions in the `example_queries.md` file.
 
 Note that the AI is nondeterministic, so you may get different responses each time you ask a question.
 
+For the CLI interface, you can interact with it directly in the terminal:
+
+![CLI](./assets/1-2-cli.png)
+
+If you want to use the web-based interface, first run `uv run ui.py` to boot up the web server:
+
+![Start the UI](./assets/1-2-start-ui.png)
+
+Next, open up a preview of the application:
+
+![Open the preview](./assets/1-2-preview.png)
+
+The preview opens up in a small pane by default; you can drag the tab around, for example, merging it in with your main editor tabs, to make the preview larger. In this UI interface, you can ask questions to test your RAG system:
+
+![UI](./assets/1-2-ui.png)
+
+You might notice that this output is incorrect! Don't worry, we'll learn how to detect incorrect responses like this automatically in Part 2.
+
+If you make changes to `rag.py`, you'll need to restart the CLI / web server. To interrupt / shut down the CLI or the web server, you can press ^C (Control-C):
+
+![Interrupt](./assets/1-2-interrupt.png)
+
 ## Part 2: Detecting bad responses
 
-![RAG system with issue detection](./assets/detection.png)
+![RAG system with issue detection](./assets/2-detection.svg)
 
 Now that we have a baseline RAG system, we'll start adding some improvements on top of it. In this part, we'll focus on _detecting_ issues in the RAG system.
 
@@ -114,11 +169,15 @@ Now that we've detected issues in the LLM response, we want to update the respon
 
 ### 2.3: Test the RAG system with issue detection
 
-We can now run the RAG system again using `uv run cli.py` or `uv run ui.py` to test our new system with issue detection! Try asking some questions and see if you can find any where issues are detected.
+We can now run the RAG system again using `uv run cli.py` or `uv run ui.py` to test our new system with issue detection! Try asking some questions and see if you can find any where issues are detected:
+
+![Issue detection](./assets/2-3-detection.png)
+
+**Note**: in a real-world use case, we wouldn't return a bad output to the user (as our demo app does for illustrative purposes); instead, we'd do something like returning a fallback answer (for example, "Sorry, I cannot answer that question at this time.") or escalating to a human.
 
 ## Part 3: Remediating issues
 
-![RAG system with issue remediation](./assets/remediation.png)
+![RAG system with issue remediation](./assets/3-remediation.svg)
 
 Detecting issues is great, but ideally we want to _remediate_ them as well. [Cleanlab Codex](https://codex.cleanlab.ai) provides
 an interface for Subject Matter Experts (SMEs) to contribute to remediation. When the Codex `Validator` detects an issue in a response, it will automatically add the question to the connected Codex project (that you created in Part 0). Your Subject Matter Experts can then review the question and provide a verified response. Then when your system encounters the same (or similar) question in the future, it will return the verified response instead of the LLM response.
@@ -131,35 +190,47 @@ Update the `query` method of your `RAG` class to check if the response from `Val
 
 Now that you've updated the `query` method to handle expert answers, you can try testing issue remediation. If you already found some questions in Part 2 with bad responses, you should see those questions in your Codex project. Otherwise, run the RAG system again using `uv run cli.py` or `uv run ui.py` and ask some questions to find some with bad responses.
 
-Then navigate to the [Codex project](https://codex.cleanlab.ai/projects) you created earlier. You should see the questions you asked in the project. Put on your Subject Matter Expert hat and try answering some of the questions!
+Then navigate to the [Codex project](https://codex.cleanlab.ai/projects) you created earlier. You should see the questions you asked in the project:
 
-Now you return to the RAG system and try asking the same questions again. You should see that the RAG system now returns the expert answers instead of the LLM responses! You can also try asking questions that are similar to the ones you asked before, and you should see that the RAG system now returns the expert answers for those as well (If you do not get expert answers back, you can try adjusting the similarity threshold for your project in the [Codex UI](https://codex.cleanlab.ai/projects)).
+![Question](./assets/3-2-question.png)
+
+Put on your Subject Matter Expert hat and try answering some of the questions! Make sure to Publish your answer, so it starts affecting the output of the RAG system:
+
+![Answer](./assets/3-2-answer.png)
+
+Now you return to the RAG system and try asking the same questions again. You should see that the RAG system now returns the expert answers instead of the LLM responses! You can also try asking questions that are similar to the ones you asked before, and you should see that the RAG system now returns the expert answers for those as well:
+
+![Expert answer returned by RAG app](./assets/3-2-expert-answer.png)
+
+If you do not get expert answers back, you can try adjusting the similarity threshold for your project in the project settings in the Codex web app.
 
 ## Part 4: Custom evaluations
 
 So far, we've used the built-in set of evaluations provided by Cleanlab. For many applications, though, it may be helpful to customize the evaluations based on your specific use case. In this part, we'll walk through an example of including custom evaluations when validating responses in your system.
 
-### 4.1: Add custom evaluations to your RAG system
+### 4.1: Enable custom evaluations in your RAG system
 
-Update your `RAG` implementation to include custom evaluations.
+Update your `RAG` implementation to include custom evaluations. See TODO Part 4.1 in `rag.py` to enable custom evaluations. This enables a custom evaluation that assesses whether a user question is related to a competitor.
 
-#### 4.1a: Define custom evaluations
+Once you've added custom evaluations to your RAG system, you can test it out again using `uv run cli.py` or `uv run ui.py`. Try asking some questions where you expect the custom evaluation scores to be high or low.
 
-Define a custom evaluation to include in your RAG system. See TODO Part 4.1a in `rag.py` for information on how to define custom evaluations and the format expected. Implement your solution there.
+![Question about a competitor](./assets/4-1-custom-eval-competitor.png)
 
-#### 4.1b: Update the RAG system to use your custom evaluations
+### 4.2: Write your own custom evaluations
 
-Update your RAG system to use the custom evaluation you just defined. Be sure to set thresholds for you evalution as well. You may want to consider whether the custom evaluation should influence bad response detection for your system. It's possible to include an evaluation that does not contribute to issue detection by specifying a `bad_response_threshold` of 0. Implement your solution in TODO Part 4.1b in `rag.py`.
+Define a custom evaluation to include in your RAG system. See TODO Part 4.2 in `rag.py` for information on how to define custom evaluations and the format expected. Implement your solution there.
 
-### 4.2: Test the RAG system with custom evaluations
+For this custom evaluation, you'll be evaluating instruction adherence (does the RAG system follow instruction 1 in the `PROMPT_TEMPLATE` from `constants.py`?).
 
-Now that you've added custom evaluations to your RAG system, you can test it out again using `uv run cli.py` or `uv run ui.py`. Try asking some questions where you expect the custom evaluation scores to be high or low. If you included a custom evaluation that contributes to Validator's `bad_response_thresholds`, you should see that the RAG system now applies the remediation logic from Part 3 to those questions.
+Once you've added this custom evaluation, re-run the system and try asking some questions where you expect the custom evaluation scores to be high or low. See `example_queries.md` if you need inspiration.
+
+![Response that mentions "context"](./assets/4-2-custom-eval-context.png)
 
 ## Solutions
 
 If you want to see fully-worked solutions for this workshop, you can check out the `solutions` directory.
 
-To run the CLI/UI with the solutions, you can set the `USE_SOLUTION` environment variable appropriately. For example, run `USE_SOLUTION=custom_evals uv run ui.py` to run the UI with the custom evals solution.
+To run the CLI/UI with the solutions, you can set the `USE_SOLUTION` environment variable appropriately (e.g., to "4" for the solution to part 4). For example, run `USE_SOLUTION=4 uv run ui.py` to run the UI with the custom evals solution.
 
 ## Resources
 

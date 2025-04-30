@@ -10,7 +10,3 @@ wheels/
 
 # Virtual environments
 .venv
-
-*.ipynb
-
-vector_store/
