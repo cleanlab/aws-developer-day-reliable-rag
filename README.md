@@ -123,7 +123,7 @@ We've provided a partial implementation of the RAG system in the `rag.py` file. 
 
 ![rag.py](./assets/1-1-rag.png)
 
-Your task is to implement a single method to complete the system: the `_query` method. This method will take the user's question and use the `_retrieve`, `_format_contexts`, and `_generate` methods to query the RAG system and get an answer for the user's question based on relevant context. See TODO Part 1.1 in `rag.py`.
+Your task is to implement a single method to complete the system: the `query` method. This method will take the user's question and use the `_retrieve`, `_format_contexts`, and `_generate` methods to query the RAG system and get an answer for the user's question based on relevant context. See TODO Part 1.1 in `rag.py`.
 
 ### 1.2: Test the baseline RAG system
 

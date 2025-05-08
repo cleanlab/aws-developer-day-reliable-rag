@@ -42,8 +42,9 @@ CUSTOM_EVALS: list[TrustworthyRAGEval] = [
         query_identifier="Question",
     ),
     # TODO Part 4.2: Implement a custom eval.
-    # Define a custom evaluation to check for instruction adherence, specifically, to check if the response mentions
-    # "context" in any way.
+    # Define a custom evaluation to check for a violation of instructions, specifically, to check if the response
+    # mentions "context" in any way (which would violate instruction #1 in our PROMPT_TEMPLATE).
+    #
     # To define a custom evaluation, you'll need to specify a `criteria` string which describes in natural language
     # what you want to evaluate. If your evaluation references the user's query, the retrieved context, or the
     # LLM response, you'll need to include the `query_identifier`, `context_identifier`, or `response_identifier`
@@ -152,7 +153,7 @@ class RAG:
         assert isinstance(response, str)
         return response
 
-    def _parse_validation_results(self, validation_results: dict[str, Any]) -> tuple[bool, str, list[Eval]]:
+    def _parse_validation_results(self, validation_results: dict[str, Any]) -> tuple[bool, str | None, list[Eval]]:
         """
         Parses the validation results from the Validator.
 
@@ -163,9 +164,9 @@ class RAG:
             validation_results (dict): The validation results from the Validator.
 
         Returns:
-            tuple[bool, str, list[Eval]]: A tuple containing:
+            tuple[bool, str | None, list[Eval]]: A tuple containing:
                 - is_bad_response (bool): Whether the response is bad.
-                - expert_answer (str): The expert answer if available.
+                - expert_answer (str | None): The expert answer if available, otherwise None.
                 - eval_results (list[Eval]): A list of evaluation results.
         """
         is_bad_response = validation_results.pop("is_bad_response")
@@ -203,7 +204,7 @@ class RAG:
         # variable.
 
         # TODO Part 2.2: Update the return value of this method based on the detected issues. You can use the provided
-        # `_parse_validator_response` method to extract the `is_bad_response` and `eval_results` from
+        # `_parse_validation_results` method to extract the `is_bad_response` and `eval_results` from
         # the `Validator` output. For now, don't worry about setting the `is_expert_answer` field. We'll do that in the
         # next part of the assignment.
 
